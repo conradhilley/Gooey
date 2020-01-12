@@ -5,11 +5,12 @@ Created on Dec 23, 2013
 '''
 
 import wx
+import os
+import uuid
 
-from gooey.gui import imageutil, image_repository
+from gooey.gui import imageutil
 from gooey.gui.util import wx_util
-from gooey.gui.three_to_four import bitmapFromImage
-from gooey.util.functional import getin
+
 
 PAD_SIZE = 10
 
@@ -32,7 +33,6 @@ class FrameHeader(wx.Panel):
 
         self.layoutComponent()
 
-
     def setTitle(self, title):
         self._header.SetLabel(title)
 
@@ -44,7 +44,6 @@ class FrameHeader(wx.Panel):
             img.Show(False)
         getattr(self, image).Show(True)
         self.Layout()
-
 
     def layoutComponent(self):
 
@@ -75,22 +74,39 @@ class FrameHeader(wx.Panel):
         sizer.Add(headings_sizer, 1,
                   wx.ALIGN_LEFT | wx.ALIGN_CENTER_HORIZONTAL | wx.EXPAND | wx.LEFT,
                   PAD_SIZE)
-        sizer.Add(self.settings_img, 0, wx.ALIGN_RIGHT | wx.EXPAND | wx.RIGHT, PAD_SIZE)
-        sizer.Add(self.running_img, 0, wx.ALIGN_RIGHT | wx.EXPAND | wx.RIGHT, PAD_SIZE)
-        sizer.Add(self.check_mark, 0, wx.ALIGN_RIGHT | wx.EXPAND | wx.RIGHT, PAD_SIZE)
-        sizer.Add(self.error_symbol, 0, wx.ALIGN_RIGHT | wx.EXPAND | wx.RIGHT, PAD_SIZE)
+        sizer.Add(self.settings_img, 0, wx.ALIGN_RIGHT | wx.CENTER | wx.RIGHT, PAD_SIZE)
+        sizer.Add(self.running_img, 0, wx.ALIGN_RIGHT | wx.CENTER | wx.RIGHT, PAD_SIZE)
+        sizer.Add(self.check_mark, 0, wx.ALIGN_RIGHT | wx.CENTER | wx.RIGHT, PAD_SIZE)
+        sizer.Add(self.error_symbol, 0, wx.ALIGN_RIGHT | wx.CENTER | wx.RIGHT, PAD_SIZE)
         self.running_img.Hide()
         self.check_mark.Hide()
         self.error_symbol.Hide()
         vsizer.Add(sizer, 1, wx.EXPAND)
         self.SetSizer(vsizer)
 
-
     def _load_image(self, imgPath, targetHeight):
+        if imgPath.lower().endswith('.gif'):
+            # Write resized gif to temp file
+            tempImage = os.path.splitext(imgPath)[0] + \
+                        '_{}.gif'.format(str(uuid.uuid4()))
+
+            tempImage = imageutil.resizeGif(imgPath, tempImage, targetHeight)
+
+            # Create AnimationCtrl
+            gif = wx.adv.Animation(tempImage)
+            ctrl = wx.adv.AnimationCtrl(self, -1, gif)
+
+            # Delete temp file
+            os.remove(tempImage)
+
+            # Begin playback
+            ctrl.Play()
+            return ctrl
+
+        # If not a gif, use standard thumbnail resizing
         rawImage = imageutil.loadImage(imgPath)
         sizedImage = imageutil.resizeImage(rawImage, targetHeight)
         return imageutil.wrapBitmap(sizedImage, self)
-
 
     def build_heading_sizer(self):
         sizer = wx.BoxSizer(wx.VERTICAL)
